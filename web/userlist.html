@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>用户的列表</title>
+    <!-- 要是用layui, 需要引入 1个js  和 1 css  因为你我路径不一样, 别抄袭我的,,copy 你自己的啊 -->
+    <script src="js/layui-v2.5.6/layui/layui.js"></script>
+    <link rel="stylesheet" href="js/layui-v2.5.6/layui/css/layui.css">
+</head>
+
+<body>
+
+<!--我是修改-->
+<script type="text/html" id="updateHtml">
+    <form class="layui-form  layui-form-pane" action="" onsubmit="return false" lay-filter="myUpdate" >
+
+        <div class="layui-form-item">
+            <label class="layui-form-label">账号</label>
+            <div class="layui-input-inline">
+                <input type="text" name="username"  class="layui-input">
+            </div>
+        </div>
+
+        <div class="layui-form-item">
+            <label class="layui-form-label">姓名</label>
+            <div class="layui-input-inline">
+                <input type="text" name="real_name"  class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">密码</label>
+            <div class="layui-input-inline">
+                <input type="password" name="password"  class="layui-input">
+            </div>
+        </div>
+
+        <div class="layui-form-item">
+            <label class="layui-form-label">角色</label>
+            <div class="layui-input-inline">
+                <select name="type">
+                    <option value="">请选择</option>
+                    <option value="1">管理员</option>
+                    <option value="2" selected="">用户</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="layui-form-item">
+            <label class="layui-form-label">是否可用</label>
+            <div class="layui-input-inline">
+                <input type="radio" name="is_del" value="1" title="是" checked="">
+                <input type="radio" name="is_del" value="2" title="否">
+                <!--<input type="radio" name="sex" value="禁" title="禁用" disabled="">-->
+            </div>
+        </div>
+
+        <div class="layui-form-item">
+            <label class="layui-form-label">修改时间</label>
+            <div class="layui-input-inline">
+                <input type="text" name="modify_time" class="layui-input" id="updateTime" placeholder="yyyy-MM-dd HH:mm:ss">
+            </div>
+        </div>
+
+
+        <!--id 隐藏起来-->
+        <input class="layui-input" type="hidden" value="" name="id">
+        <!--下面应该有 提交 或者 返回按钮- 隐藏起来 -->
+        <button class="layui-btn layui-hide" lay-submit lay-filter="myUpdateSubmit" id="myUpdateSubmit">立即提交</button>
+
+
+    </form>
+
+</script>
+
+
+
+<!--加上一个搜索框-->
+<form class="layui-form  layui-form-pane" action="" onsubmit="return false">
+    <div class="layui-form-item">
+        <label class="layui-form-label">账户</label>
+        <div class="layui-input-inline">
+            <input type="text" name="username"  placeholder="请输入账号" class="layui-input">
+        </div>
+
+        <label class="layui-form-label">名称</label>
+        <div class="layui-input-inline">
+            <input type="text" name="real_name"  placeholder="请输入姓名" class="layui-input">
+        </div>
+
+        <label class="layui-form-label">角色</label>
+        <div class="layui-input-inline">
+            <select name="type">
+                <option value="">请选择</option>
+                <option value="1">管理员</option>
+                <option value="2" selected="">用户</option>
+            </select>
+        </div>
+
+        <div class="layui-input-inline">
+            <button type="submit" class="layui-btn" lay-submit="" lay-filter="searchBtn">搜索</button>
+        </div>
+    </div>
+
+</form>
+
+
+<!-- 数据表格如何用呢? 第一步,拷贝一个 html  table 标记 -->
+<table class="layui-hide" id="test" lay-filter="test"></table>
+
+
+<script type="text/html" id="toolbarDemo">
+    <div class="layui-btn-container">
+        <button class="layui-btn layui-btn-sm" lay-event="getCheckData">获取选中行数据</button>
+        <button class="layui-btn layui-btn-sm" lay-event="getCheckLength">获取选中数目</button>
+        <button class="layui-btn layui-btn-sm" lay-event="isAll">验证是否全选</button>
+    </div>
+</script>
+
+<script type="text/html" id="barDemo">
+    <a class="layui-btn layui-btn-xs" lay-event="edit">编辑</a>
+    <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del">删除</a>
+</script>
+
+
+<script>
+    layui.use(['form', 'table', 'util', 'jquery','laydate'], function (args) {
+        var form = layui.form;
+        var table = layui.table;
+        var util = layui.util;
+        var $ = layui.jquery;
+        var laydate = layui.laydate;
+
+        // table.render 是渲染 上面的 table 表格
+        table.render({
+            elem: '#test'
+            // , url: '/test/table/demo1.json'
+            , url: '/UserSelectServlet'
+            , toolbar: '#toolbarDemo' //开启头部工具栏，并为其绑定左侧模板
+            , defaultToolbar: ['filter', 'exports', 'print', { //自定义头部工具栏右侧图标。如无需自定义，去除该参数即可
+                title: '提示'
+                , layEvent: 'LAYTABLE_TIPS'
+                , icon: 'layui-icon-tips'
+            }]
+            , title: '用户数据表'
+            , cols: [[
+                {type: 'checkbox', fixed: 'left'}
+
+                // , {
+                //     field: 'email', title: '邮箱', width: 150, edit: 'text', templet: function (res) {
+                //         return '<em>' + res.email + '</em>'
+                //     }
+                // }
+                , {field: 'id', title: '序号', width: 80, edit: 'text', sort: true}
+                , {field: 'username', title: '账号', width: 160}
+                , {field: 'real_name', title: '姓名', width: 160}
+                , {field: 'password', title: '密码', width: 160}
+                , {field: 'type', title: '类型', width: 160,templet:function (d) {
+                        //管理员1 变红
+                        var type = d.type;
+                            if(type == 1){
+                                return "<span style='color:red'>管理员</span>"
+                            }else{
+                                return "<span style='color:green'>用户</span>"
+                            }
+                        }}
+                , {field: 'is_del', title: '是否能用', width: 160,templet:function (d) {
+                        if (d.is_del==1) {
+                            return "  <input type=\"checkbox\" checked=\"\" name=\"open\" lay-skin=\"switch\" lay-filter=\"switchTest\" lay-text=\"是|否\"   value='1' >"
+                        } else {
+                            return "  <input type=\"checkbox\"name=\"close\" lay-skin=\"switch\" lay-filter=\"switchTest\"  lay-text=\"是|否\"  value='2' >"
+                        }
+                    }}
+                , {field: 'img', title: '头像', width: 200,align:'center', templet:function () {
+                       return '<div><img src="1.jpg"></div>'
+                    }}
+                , {field: 'create_time', title: '创建时间', width: 160}
+                , {field: 'modify_time', title: '修改时间', width: 160}
+
+                , {fixed: 'right', title: '操作', toolbar: '#barDemo', width: 150}
+
+            ]]
+            , page: true
+            ,parseData: function(res){ //res 即为原始返回的数据
+                return {
+                    "code": res.number, //解析接口状态
+                    "msg": res.message, //解析提示文本
+                    "count": res.object.count111, //解析数据长度
+                    "data": res.object.data111 //解析数据列表
+                };
+            }
+            ,response: {
+            statusName: 'code' //规定数据状态的字段名称，默认：code
+                ,statusCode: 20001 //规定成功的状态码，默认：0
+                ,msgName: 'msg' //规定状态信息的字段名称，默认：msg
+                ,countName: 'count' //规定数据总数的字段名称，默认：count
+                ,dataName: 'data' //规定数据列表的字段名称，默认：data
+        }
+    });
+
+
+        //头工具栏事件
+        table.on('toolbar(test)', function (obj) {
+            var checkStatus = table.checkStatus(obj.config.id);
+            switch (obj.event) {
+                case 'getCheckData':
+                    var data = checkStatus.data;
+                    layer.alert(JSON.stringify(data));
+                    break;
+                case 'getCheckLength':
+                    var data = checkStatus.data;
+                    layer.msg('选中了：' + data.length + ' 个');
+                    break;
+                case 'isAll':
+                    layer.msg(checkStatus.isAll ? '全选' : '未全选');
+                    break;
+
+                //自定义头工具栏右侧图标 - 提示
+                case 'LAYTABLE_TIPS':
+                    layer.alert('这是工具栏右侧自定义的一个图标按钮');
+                    break;
+            };
+        });
+
+        //监听行工具事件
+        table.on('tool(test)', function (obj) {
+            var data = obj.data;
+            //console.log(obj)
+            if (obj.event === 'del') {
+                layer.confirm('真的删除行么', function (index) {
+                    obj.del();
+                    layer.close(index);
+                });
+            } else if (obj.event === 'edit') {
+                layer.open({
+                    title:'编辑',
+                    area: ['600px', '600px'],
+                    type: 1,
+                    //  content: '<h1>你好世界..</h1>' // 一般不吧html写在这里
+                    content: $("#updateHtml").html() ,
+                    success:function (layero, index) {
+                        console.log(layero)
+                        console.log(index)
+                        console.log(" 我是 layer 弹出成功后的回调")
+                        console.log(data)
+
+                        //给表单赋值
+                        form.val("myUpdate", { //formTest 即 class="layui-form" 所在元素属性 lay-filter="" 对应的值
+                            "username": data.username // "name": "value"
+                            ,"real_name": data.real_name
+                            ,"password": data.password
+                            ,"type": data.type
+                            ,"is_del": data.is_del
+                            ,"modify_time": data.modify_time
+                            ,"id":data.id
+                        });
+
+                        form.render();  // 重点:强调: 当界面发生改变时, 记得 重新渲染模块,不然不显示效果
+                        //日期时间选择器
+                        laydate.render({
+                            elem: '#updateTime'
+                            ,type: 'datetime'
+                        });
+
+                    },
+                    btn:['确定修改','取消修改','其他'],
+                    yes:function (index, layero) {
+                       // alert("向后台发送了ajax")
+                        $("#myUpdateSubmit").click();
+                        return false;  //开启该代码可禁止点击该按钮关闭
+                    },
+                    btn2:function (index, layero) {
+                        alert("我取消了修改")
+                        return false;  //开启该代码可禁止点击该按钮关闭
+                    }
+                });
+            }
+        });
+
+        //监听指定开关
+        form.on('switch(switchTest)', function (data) {
+            console.log(data)
+            console.log(data.othis.parents('tr').find("td").eq(1).text())
+            console.log("看上面")
+            var userId = data.othis.parents('tr').find("td").eq(1).text();
+            var x = this.checked ? true : false;
+            console.log(x)
+            if (x) {
+                console.log("是,,,,true")
+                data.value = "1"
+                console.log(data.value)
+            } else {
+                console.log("否,,,,else")
+
+                data.value = "2"
+                console.log(data.value)
+            }
+            $.ajax({
+                url: '/UserUpdateForDelServlet',
+                type: 'post',
+                data: {
+                    //"is_del": data.othis.text()
+                    "sfDel":data.value,
+                    "userId":userId
+                },
+                dataType: 'json',
+                success: function (res) {
+                    //alert("是否修改");
+                }
+            });
+
+            layer.msg('是否有效：' + (this.checked ? '有效' : '无效'), {
+                offset: '6px'
+            });
+            //    layer.tips('温馨提示：请注意开关状态的文字可以随意定义，而不仅仅是ON|OFF', data.othis)
+        });
+        //监听搜索按钮
+        form.on('submit(searchBtn)',function (data) {
+            //alert('监听搜索')
+            console.log(data.field);
+            /*table.on('edit(tableTest)',function (obj) {
+                var value = obj.value,//得到修改后的值
+                    data = obj.data,//得到所在行所有键值
+                    field = obj.field;//得到字段
+                console.log(value+'T'+data.bonusProjectId+'I'+data.userId+'D'+field);
+            });
+            var date = layui.table.cache.demoFin;//获取当前表格数据*/
+            table.reload('test',{
+                where:{//设定异步数据接口的额外参数，任意设
+                    real_name:data.field.real_name
+                    ,type:data.field.type
+                    ,username:data.field.username
+                }
+                ,page:{
+                    curr:1//重新从第1页开始
+                }
+            });//只重再数据
+            return false;
+        })
+
+        //监听修改的按钮
+            form.on('submit(myUpdateSubmit)',function (data) {
+                console.log(data);
+                $.ajax({
+                    url:"/UserUpdateServlet",
+                    type:'post',
+                    data:data.field,
+                    dataType:'JSON',
+                    success:function (res) {
+                        console.log(res)
+                        if(res.code==0){
+                        layer.msg("修改成功")
+                        table.reload('test',{
+                            page:{
+                                curr:1//重新从第1页开始
+                            }
+                        });//只重载数据
+                    }
+                }
+            });
+
+        })
+    });
+
+</script>
+
+</body>
+</html>
